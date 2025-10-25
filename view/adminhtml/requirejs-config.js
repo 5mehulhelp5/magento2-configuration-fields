@@ -7,7 +7,13 @@
 var config = {
     map: {
         '*': {
-            'cron-editor': 'Hryvinskyi_ConfigurationFields/js/cron-editor'
+            'cron-editor': 'Hryvinskyi_ConfigurationFields/js/cron-editor',
+            'cronstrue': 'Hryvinskyi_ConfigurationFields/js/cronstrue'
+        }
+    },
+    shim: {
+        'Hryvinskyi_ConfigurationFields/js/cronstrue': {
+            exports: 'cronstrue'
         }
     }
 };

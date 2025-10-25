@@ -4,7 +4,7 @@
  * GitHub: https://github.com/hryvinskyi
  */
 
-define(['jquery'], function ($) {
+define(['jquery', 'cronstrue'], function ($, cronstrue) {
     'use strict';
     return function (config) {
         var inputId = config.inputId;
@@ -22,32 +22,6 @@ define(['jquery'], function ($) {
             month: /^(\*|([1-9]|1[0-2])(-([1-9]|1[0-2]))?(,([1-9]|1[0-2])(-([1-9]|1[0-2]))?)*|\*\/([1-9]|1[0-2]))$/,
             dayOfWeek: /^(\*|[0-6](-[0-6])?(,[0-6](-[0-6])?)*|\*\/[0-6])$/
         };
-        var nameMaps = {
-            month: {
-                '1': $.mage.__('January'),
-                '2': $.mage.__('February'),
-                '3': $.mage.__('March'),
-                '4': $.mage.__('April'),
-                '5': $.mage.__('May'),
-                '6': $.mage.__('June'),
-                '7': $.mage.__('July'),
-                '8': $.mage.__('August'),
-                '9': $.mage.__('September'),
-                '10': $.mage.__('October'),
-                '11': $.mage.__('November'),
-                '12': $.mage.__('December')
-            },
-            'day-of-week': {
-                '0': $.mage.__('Sunday'),
-                '1': $.mage.__('Monday'),
-                '2': $.mage.__('Tuesday'),
-                '3': $.mage.__('Wednesday'),
-                '4': $.mage.__('Thursday'),
-                '5': $.mage.__('Friday'),
-                '6': $.mage.__('Saturday')
-            }
-        };
-        var summaryParts = {};
         var $fields = fieldIds.map(function(id) {
             return $('#'+id+'-'+inputId);
         });
@@ -56,9 +30,8 @@ define(['jquery'], function ($) {
         $fields.forEach(function($f, i) {
             $f.val(initial[i] || '*');
         });
-        // Track validation state and current highlighted field
+        // Track validation state
         var isExpressionInvalid = false;
-        var currentHighlightIndex = null;
 
         // Inherit checkbox logic
         var $inheritCheckbox = $('#' + inputId + '_inherit');
@@ -95,227 +68,18 @@ define(['jquery'], function ($) {
             });
 
             // Update error state
-            var wasInvalid = isExpressionInvalid;
             isExpressionInvalid = hasError;
 
             if (hasError) {
                 $('#summary-'+inputId).html('<span class="cron-editor-error">Invalid cron expression. Please check highlighted fields.</span>');
             } else {
-                generateAndDisplaySummary(cronValues);
-                // If coming from error state, apply the current highlight
-                if (wasInvalid && currentHighlightIndex !== null) {
-                    displaySummaryWithHighlight(currentHighlightIndex);
+                try {
+                    var description = cronstrue.toString(cronExpr);
+                    $('#summary-'+inputId).text(description);
+                } catch (error) {
+                    $('#summary-'+inputId).html('<span class="cron-editor-error">Invalid cron expression.</span>');
                 }
             }
-        }
-
-        function generateAndDisplaySummary(cronValues) {
-            var minute = cronValues[0], hour = cronValues[1], dayOfMonth = cronValues[2], month = cronValues[3], dayOfWeek = cronValues[4];
-
-            // Format time in HH:MM format for specific times
-            var timeDisplay = '';
-            var isSpecificTime = false;
-            var minuteText = '';
-            var hourText = '';
-
-            if (minute !== '*' && hour !== '*' && !minute.includes('*') && !hour.includes('*') &&
-                !minute.includes(',') && !hour.includes(',') &&
-                !minute.includes('-') && !hour.includes('-') &&
-                !minute.includes('/') && !hour.includes('/')) {
-                // For single specific time
-                var displayHour = hour.padStart(2, '0');
-                var displayMinute = minute.padStart(2, '0');
-                timeDisplay = displayHour + ':' + displayMinute;
-                isSpecificTime = true;
-            } else {
-                // For patterns, generate separate parts for minute and hour
-                minuteText = parseExpressionPart(minute, 'minute', 0);
-                hourText = parseExpressionPart(hour, 'hour', 1);
-                timeDisplay = minuteText + ' ' + hourText;
-            }
-
-            var domPhrase = '';
-            if (dayOfMonth === '*') {
-                domPhrase = '';
-            } else {
-                domPhrase = ' ' + parseExpressionPart(dayOfMonth, 'day-of-month', 2);
-            }
-
-            summaryParts = {
-                prefix: 'At ',
-                time: timeDisplay,
-                isSpecificTime: isSpecificTime, // Flag to indicate if we have HH:MM format
-                hourValue: hour.padStart(2, '0'),
-                minuteValue: minute.padStart(2, '0'),
-                minuteText: minuteText,
-                hourText: hourText,
-                dayOfMonth: domPhrase,
-                month: month !== '*' ? ' in ' + formatSimpleMonth(month) : '',
-                dayOfWeek: ''
-            };
-
-            if (dayOfWeek !== '*') {
-                if (dayOfMonth !== '*') {
-                    summaryParts.dayOfWeek = " if it's " + parseExpressionPart(dayOfWeek, 'day-of-week', 4);
-                } else {
-                    summaryParts.dayOfWeek = ' ' + parseExpressionPart(dayOfWeek, 'day-of-week', 4);
-                }
-            }
-
-            displaySummaryWithHighlight(currentHighlightIndex);
-        }
-
-        function formatSimpleValue(expr) {
-            // For simple expressions without ranges or lists
-            if (!expr.includes(',') && !expr.includes('-') && !expr.includes('/')) {
-                return expr;
-            }
-            // For complex expressions, use the original parse logic
-            return expr;
-        }
-
-        function formatSimpleMonth(expr) {
-            // For single month value
-            if (!expr.includes(',') && !expr.includes('-') && !expr.includes('/')) {
-                return nameMaps.month[expr] || expr;
-            }
-            // For complex expressions
-            return parseExpressionPart(expr, 'month', 3).replace('month ', '');
-        }
-
-        function displaySummaryWithHighlight(highlightIndex) {
-            // If there's an error, maintain the error message and don't modify summary
-            if (isExpressionInvalid) {
-                return;
-            }
-
-            var html = summaryParts.prefix;
-
-            // Special handling for time part with HH:MM format
-            if (summaryParts.isSpecificTime) {
-                if (highlightIndex === 0) { // Minute field focused
-                    html += summaryParts.hourValue + ':' +
-                        '<span class="cron-editor-highlight">' + summaryParts.minuteValue + '</span>';
-                } else if (highlightIndex === 1) { // Hour field focused
-                    html += '<span class="cron-editor-highlight">' + summaryParts.hourValue + '</span>' +
-                        ':' + summaryParts.minuteValue;
-                } else { // No field focused or other field focused
-                    html += summaryParts.time;
-                }
-            } else {
-                // For non-specific time formats, split the time part into minute and hour for separate highlighting
-                var minutePart = summaryParts.minuteText;
-                var hourPart = summaryParts.hourText;
-                if ((minutePart || hourPart) && (highlightIndex === 0 || highlightIndex === 1)) {
-                    html += (highlightIndex === 0
-                        ? '<span class="cron-editor-highlight">' + minutePart + '</span>'
-                        : minutePart
-                    ) + ' ' +
-                    (highlightIndex === 1
-                        ? '<span class="cron-editor-highlight">' + hourPart + '</span>'
-                        : hourPart
-                    );
-                } else {
-                    html += summaryParts.time;
-                }
-            }
-
-            // Handle other parts
-            var parts = [
-                {
-                    key: 'dayOfMonth',
-                    index: 2,
-                    sortOrder: 2
-                },
-                {
-                    key: 'month',
-                    index: 3,
-                    sortOrder: 4
-                },
-                {
-                    key: 'dayOfWeek',
-                    index: 4,
-                    sortOrder: 3
-                }
-            ];
-
-            parts
-                .sort((a, b) => {return a.sortOrder - b.sortOrder})
-                .forEach(function(part) {
-                if (summaryParts[part.key]) {
-                    if (highlightIndex === part.index) {
-                        html += '<span class="cron-editor-highlight">' + summaryParts[part.key] + '</span>';
-                    } else {
-                        html += summaryParts[part.key];
-                    }
-                }
-            });
-
-            $('#summary-'+inputId).html(html + '.');
-        }
-
-        function parseExpressionPart(expr, type, idx) {
-            var fieldLabel = fieldIds[idx].replace('-', ' ');
-            var fieldPrefix = '';
-            var fieldSuffix = 's';
-
-            if (type === 'hour') {
-                fieldPrefix = 'past';
-                fieldSuffix = '';
-            }
-            if (type === 'day-of-week') {
-                fieldPrefix = 'on';
-                fieldSuffix = '';
-            }
-            if (type === 'day-of-month') {
-                fieldLabel = fieldIds[idx];
-                fieldPrefix = 'on';
-                fieldSuffix = '';
-            }
-
-            if (expr === '*' && type === 'hour') return '';
-            if (expr === '*') return 'every ' + fieldLabel;
-            if (expr === '*') return 'every ' + fieldLabel;
-
-            if (expr.includes('*/')) {
-                var step = expr.split('/')[1];
-                return (fieldPrefix ? fieldPrefix + ' ' : '') + 'every ' + formatOrdinal(step) + ' ' + fieldLabel;
-            }
-
-            if (expr.includes(',')) {
-                var values = expr.split(',');
-                return (fieldPrefix ? fieldPrefix + ' ' : '') + fieldLabel + fieldSuffix + ' '  + formatList(values, type);
-            }
-
-            if (expr.includes('-')) {
-                var parts = expr.split('-');
-                // ex from n through n1.
-                if (parts[0] !== undefined && parts[1] !== undefined) {
-                    return (fieldPrefix ? fieldPrefix + ' ' : '') + 'every ' + fieldLabel + ' from ' + formatValue(parts[0], type) + ' through ' + formatValue(parts[1], type);
-                }
-            }
-
-            return (fieldPrefix ? fieldPrefix + ' ' : '') + fieldLabel + ' ' + formatValue(expr, type);
-        }
-
-        function formatList(values, type) {
-            if (values.length === 1) return formatValue(values[0], type);
-            if (values.length === 2) return formatValue(values[0], type) + ' and ' + formatValue(values[1], type);
-            var last = values.pop();
-            return values.map(function(v) { return formatValue(v, type); }).join(', ') + ', and ' + formatValue(last, type);
-        }
-
-        function formatValue(val, type) {
-            if (nameMaps[type] && nameMaps[type][val]) {
-                return nameMaps[type][val];
-            }
-            return val;
-        }
-
-        function formatOrdinal(num) {
-            var n = parseInt(num, 10);
-            var s = ['th','st','nd','rd'], v = n%100;
-            return n + (s[(v-20)%10] || s[v] || s[0]);
         }
 
         function showCronTableSection(idx) {
@@ -344,24 +108,9 @@ define(['jquery'], function ($) {
         $fields.forEach(function($f, idx) {
             $f.on('input', updateCronExpression);
             $f.on('focus', function() {
-                // Always highlight the field being focused, even with errors
-                // We'll store the current highlight index for use when error is resolved
-                currentHighlightIndex = idx;
-
-                // Only update display if there's no error
-                if (!isExpressionInvalid) {
-                    displaySummaryWithHighlight(idx);
-                }
                 showCronTableSection(idx);
             });
             $f.on('blur', function() {
-                // Clear highlight index when field is blurred
-                currentHighlightIndex = null;
-
-                // Only update display if there's no error
-                if (!isExpressionInvalid) {
-                    displaySummaryWithHighlight(null);
-                }
                 hideAllCronTableSections();
             });
             $f.siblings('label').on('click', function() { $f.focus(); });
