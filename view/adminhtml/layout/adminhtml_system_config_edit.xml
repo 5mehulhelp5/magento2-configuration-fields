@@ -11,6 +11,7 @@
       xsi:noNamespaceSchemaLocation="urn:magento:framework:View/Layout/etc/page_configuration.xsd">
     <head>
         <css src="Hryvinskyi_ConfigurationFields::css/cron-editor.css"/>
+        <css src="Hryvinskyi_ConfigurationFields::css/tag-list.css"/>
     </head>
 </page>
 

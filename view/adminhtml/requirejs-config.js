@@ -8,7 +8,8 @@ var config = {
     map: {
         '*': {
             'cron-editor': 'Hryvinskyi_ConfigurationFields/js/cron-editor',
-            'cronstrue': 'Hryvinskyi_ConfigurationFields/js/cronstrue'
+            'cronstrue': 'Hryvinskyi_ConfigurationFields/js/cronstrue',
+            'tag-list': 'Hryvinskyi_ConfigurationFields/js/tag-list'
         }
     },
     shim: {
