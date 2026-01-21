@@ -19,6 +19,7 @@ define(['jquery'], function ($) {
         var uppercase = config.uppercase !== false;
         var separator = config.separator || '\n';
         var errorTimeout = null;
+        var inputMaxHeight = config.inputMaxHeight || '500px';
 
         var $root = $('#tag-list-' + inputId);
         var $container = $('#tag-list-container-' + inputId);
@@ -26,6 +27,8 @@ define(['jquery'], function ($) {
         var $hidden = $('#' + inputId);
         var $inheritCheckbox = $('#' + inputId + '_inherit');
         var $errorMessage = $('<div>').addClass('tag-list-error-message').insertAfter($container);
+        var $searchInput = null;
+        var searchTimeout = null;
 
         /**
          * Show error message with shake animation
@@ -115,6 +118,77 @@ define(['jquery'], function ($) {
                 tagValues.push($(this).attr('data-value'));
             });
             $hidden.val(tagValues.join(separator));
+            updateSearchVisibility();
+        }
+
+        /**
+         * Update search input visibility based on actual container height
+         */
+        function updateSearchVisibility() {
+            // Parse the max height value (remove 'px' suffix)
+            var maxHeight = parseInt(inputMaxHeight);
+            var containerHeight = $container[0].scrollHeight;
+
+            if (containerHeight > maxHeight && !$searchInput) {
+                // Create search input
+                $searchInput = $('<input>')
+                    .attr({
+                        'type': 'text',
+                        'placeholder': 'Search tags...',
+                        'class': 'tag-list-search'
+                    })
+                    .on('input', function () {
+                        filterTags($(this).val());
+                    })
+                    .on('keydown', function (e) {
+                        // Prevent Enter from submitting form
+                        if (e.key === 'Enter' || e.keyCode === 13) {
+                            e.preventDefault();
+                        }
+                    });
+
+                $searchInput.insertBefore($container);
+
+                // Add max height to container
+                $container.css({
+                    'max-height': inputMaxHeight,
+                    'overflow-y': 'auto',
+                    'overflow-x': 'hidden'
+                });
+            } else if (containerHeight <= maxHeight && $searchInput) {
+                // Remove search input
+                $searchInput.remove();
+                $searchInput = null;
+
+                // Remove max height
+                $container.css({
+                    'max-height': '',
+                    'overflow-y': '',
+                    'overflow-x': ''
+                });
+            }
+        }
+
+        /**
+         * Filter tags based on search query
+         * @param {string} query
+         */
+        function filterTags(query) {
+            query = query.toLowerCase().trim();
+
+            $container.find('.tag-list-tag').each(function () {
+                var $tag = $(this);
+                var value = $tag.attr('data-value').toLowerCase();
+
+                if (!query || value.indexOf(query) !== -1) {
+                    $tag.show();
+                } else {
+                    $tag.hide();
+                }
+            });
+
+            // Always show input
+            $input.show();
         }
 
         /**
@@ -225,19 +299,6 @@ define(['jquery'], function ($) {
         // Clear error on input
         $input.on('input', function () {
             clearError();
-        });
-
-        // Handle paste (multiple values separated by newlines or commas)
-        $input.on('paste', function (e) {
-            e.preventDefault();
-            var pasteData = (e.originalEvent.clipboardData || window.clipboardData).getData('text');
-            var pastedValues = pasteData.split(/[\r\n,]+/);
-
-            pastedValues.forEach(function (value) {
-                addTag(value);
-            });
-
-            $input.val('');
         });
 
         // Focus input when clicking container
