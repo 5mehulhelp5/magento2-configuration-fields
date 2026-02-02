@@ -6,6 +6,7 @@ A Magento 2 module that provides enhanced UI elements for the Stores > Configura
 - **Cron Expression Editor**: Interactive, validated, and human-readable cron field for system configuration.
 - **Catalog Category Selector**: A custom field type for selecting categories in the system configuration.
 - **Tag List Input**: Tag-style input for managing lists of values (postcodes, SKUs, keywords, etc.).
+- **CodeMirror Editor**: Syntax-highlighted code editor supporting multiple languages (CSS, JavaScript, HTML, PHP, SQL, YAML, etc.).
 - Modern UI/UX with real-time validation and summary.
 
 ## Installation
@@ -54,6 +55,17 @@ bin/magento setup:upgrade
     <label>Tag list</label>
     <comment>Type a value and press Enter to add. Use % as wildcard.</comment>
     <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\TagList</frontend_model>
+</field>
+
+<!-- CodeMirror Editors - syntax-highlighted code editors -->
+<field id="custom_css" translate="label" type="textarea" sortOrder="40" showInDefault="1" showInWebsite="1" showInStore="1">
+    <label>Custom CSS</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\CssEditor</frontend_model>
+</field>
+
+<field id="custom_js" translate="label" type="textarea" sortOrder="50" showInDefault="1" showInWebsite="1" showInStore="1">
+    <label>Custom JavaScript</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\JavascriptEditor</frontend_model>
 </field>
 ```
 
@@ -152,6 +164,117 @@ For custom TagList configuration, create virtual types in your module's `di.xml`
     <comment>Tag list comment</comment>
     <frontend_model>MyModule\Block\Adminhtml\TagList</frontend_model>
     <backend_model>MyModule\Model\Config\Backend\TagList</backend_model>
+</field>
+```
+
+### CodeMirror Editor Classes
+
+The module provides pre-built CodeMirror editor classes for common languages in the `CodeMirror` namespace. Use them directly in your `system.xml`:
+
+**Namespace:** `Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\`
+
+**Available Editor Classes:**
+
+| Class | Language | Mode |
+|-------|----------|------|
+| `CssEditor` | CSS | `css` |
+| `LessEditor` | LESS | `text/x-less` |
+| `ScssEditor` | SCSS | `text/x-scss` |
+| `JavascriptEditor` | JavaScript | `javascript` |
+| `JsonEditor` | JSON | `application/json` |
+| `HtmlEditor` | HTML (mixed) | `htmlmixed` |
+| `XmlEditor` | XML | `xml` |
+| `PhpEditor` | PHP | `php` |
+| `SqlEditor` | SQL | `sql` |
+| `YamlEditor` | YAML | `yaml` |
+| `MarkdownEditor` | Markdown | `markdown` |
+| `ShellEditor` | Shell/Bash | `shell` |
+
+**Usage in system.xml:**
+
+```xml
+<!-- CSS Editor -->
+<field id="custom_css" translate="label" type="textarea" sortOrder="10" showInDefault="1">
+    <label>Custom CSS</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\CssEditor</frontend_model>
+</field>
+
+<!-- JavaScript Editor -->
+<field id="custom_js" translate="label" type="textarea" sortOrder="20" showInDefault="1">
+    <label>Custom JavaScript</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\JavascriptEditor</frontend_model>
+</field>
+
+<!-- JSON Editor -->
+<field id="json_config" translate="label" type="textarea" sortOrder="30" showInDefault="1">
+    <label>JSON Configuration</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\JsonEditor</frontend_model>
+</field>
+
+<!-- HTML Editor -->
+<field id="custom_html" translate="label" type="textarea" sortOrder="40" showInDefault="1">
+    <label>Custom HTML</label>
+    <frontend_model>Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\HtmlEditor</frontend_model>
+</field>
+```
+
+### Custom CodeMirror Configuration via DI
+
+For custom configuration (theme, options), create virtual types in your module's `di.xml`:
+
+```xml
+<!-- Custom CSS Editor with Monokai theme -->
+<virtualType name="MyModule\Block\Adminhtml\DarkCssEditor"
+             type="Hryvinskyi\ConfigurationFields\Block\Adminhtml\System\Config\Form\Field\CodeMirror\CssEditor">
+    <arguments>
+        <argument name="editorConfig" xsi:type="array">
+            <item name="theme" xsi:type="string">monokai</item>
+            <item name="line_numbers" xsi:type="boolean">true</item>
+            <item name="line_wrapping" xsi:type="boolean">false</item>
+        </argument>
+    </arguments>
+</virtualType>
+```
+
+**Configuration Options:**
+
+| Option           | Type    | Default     | Description                |
+|------------------|---------|-------------|----------------------------|
+| `mode`           | string  | (per class) | Syntax highlighting mode   |
+| `theme`          | string  | `default`   | Editor color theme         |
+| `line_numbers`   | boolean | `true`      | Show line numbers          |
+| `line_wrapping`  | boolean | `true`      | Wrap long lines            |
+
+**Available Themes:**
+- `default` - Light theme (default)
+- `monokai` - Dark theme with vibrant colors
+- `material` - Material Design inspired
+- `dracula` - Dark purple theme
+
+### CodeMirror UI Component Usage
+
+For UI component forms (admin forms, not system configuration), use the CodeMirror form element.
+
+**In your UI component XML:**
+
+```xml
+<field name="custom_code" formElement="textarea">
+    <argument name="data" xsi:type="array">
+        <item name="config" xsi:type="array">
+            <item name="component" xsi:type="string">Hryvinskyi_ConfigurationFields/js/form/element/codemirror</item>
+            <item name="template" xsi:type="string">ui/form/field</item>
+            <item name="editorConfig" xsi:type="array">
+                <item name="mode" xsi:type="string">css</item>
+                <item name="theme" xsi:type="string">default</item>
+                <item name="lineNumbers" xsi:type="boolean">true</item>
+                <item name="lineWrapping" xsi:type="boolean">true</item>
+            </item>
+        </item>
+    </argument>
+    <settings>
+        <label translate="true">Custom Code</label>
+        <dataType>text</dataType>
+    </settings>
 </field>
 ```
 

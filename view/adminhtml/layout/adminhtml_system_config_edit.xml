@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <!--
 /**
- * Copyright (c) 2025. Volodymyr Hryvinskyi. All rights reserved.
+ * Copyright (c) 2025-2026. Volodymyr Hryvinskyi. All rights reserved.
  * Author: Volodymyr Hryvinskyi <volodymyr@hryvinskyi.com>
  * GitHub: https://github.com/hryvinskyi
  */
@@ -12,6 +12,7 @@
     <head>
         <css src="Hryvinskyi_ConfigurationFields::css/cron-editor.css"/>
         <css src="Hryvinskyi_ConfigurationFields::css/tag-list.css"/>
+        <css src="Hryvinskyi_ConfigurationFields::css/codemirror-editor.css"/>
     </head>
 </page>
 
